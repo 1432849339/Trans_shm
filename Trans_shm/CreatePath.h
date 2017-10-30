@@ -1,11 +1,11 @@
 #ifndef  __CREATEPATH_H_
 #define  __CREATEPATH_H_
 
-#include "cfg.h"
+#include "Trans.h"
 
 string itostr(int64_t num);
 bool CreatePath(string Path);
-string Create_sub_path(int64_t ukey, string BasePath, string date);
+bool mkdir_path(string BasePath);
 
 #endif //  __CREATEPATH_H_
 

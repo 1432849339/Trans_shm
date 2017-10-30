@@ -1,9 +1,6 @@
 #include "CreatePath.h"
 
 
-const string path = "/UKData/TDF/fqy/Request.csv/";
-extern string date;
-
 
 string itostr(int64_t num)
 {
@@ -25,51 +22,30 @@ bool CreatePath(string Path)
 	return true;
 }
 
-string Create_sub_path(int64_t ukey, string BasePath, string date)
+bool mkdir_path(string BasePath)
 {
-	string::size_type pos = 0;
-	while ((pos = BasePath.find('/', pos)) != string::npos)
+	if (access(BasePath.c_str(), F_OK) == 0)
 	{
-		string SubStr = BasePath.substr(0, pos);
-		if (access((path + SubStr).c_str(), 0) == -1)
+		return true;
+	}
+	else
+	{
+		string::size_type pos = 1;
+		while ((pos = BasePath.find('/', pos)) != string::npos)
 		{
-			if (mkdir((path + SubStr).c_str(), 0777))
+			string SubStr = BasePath.substr(0, pos);
+			if (access(SubStr.c_str(), F_OK) == -1)
 			{
-				cout << "make errorly" << __LINE__ << endl;
-				return string();
+				if (mkdir(SubStr.c_str(), 0777))
+				{
+					if (access(SubStr.c_str(), F_OK) == -1)
+					{
+						return false;
+					}
+				}
 			}
+			pos++;
 		}
-		pos++;
+		return true;
 	}
-	//ukey
-	BasePath = path + BasePath + itostr(ukey) + "/";
-	if (access(BasePath.c_str(), 0) == -1)
-	{
-		if (mkdir((BasePath).c_str(), 0777))
-		{
-			cout << "make errorly" << __LINE__ << endl;
-			return string();
-		}
-	}
-	//year
-	BasePath += date.substr(0, 4) + "/";
-	if (access(BasePath.c_str(), 0) == -1)
-	{
-		if (mkdir((BasePath).c_str(), 0777))
-		{
-			cout << "make errorly" << __LINE__ << endl;
-			return string();
-		}
-	}
-	//ymd
-	BasePath += date + "/";
-	if (access(BasePath.c_str(), 0) == -1)
-	{
-		if (mkdir((BasePath).c_str(), 0777))
-		{
-			cout << "make errorly" << __LINE__ << endl;
-			return string();
-		}
-	}
-	return BasePath;
 }

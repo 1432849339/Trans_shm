@@ -17,7 +17,7 @@ bool Init_ukdb09(const std::set<std::string>& market_set, bool use_file)
 {
 	std::cout << "InitUkeyDB start use_file=" << use_file << endl;
 	int count = 0;
-	string dir_ = "";
+	string dir_ = "/home/ubuntu/actual_data/local_file";
 	if (use_file)
 	{
 		count = ukey_db.UKOpen(dir_);
@@ -63,6 +63,7 @@ bool Init_ukdb09(const std::set<std::string>& market_set, bool use_file)
 	cout << "InitUkeyDB done use_file=" << use_file << ", count=" << count << endl;
 	return true;
 }
+
 int64_t	GetUkey(std::string market, std::string code)
 {
 	std::transform(market.begin(), market.end(), market.begin(), ::toupper);
@@ -76,11 +77,25 @@ int64_t	GetUkey(std::string market, std::string code)
 	string ucode = code;
 	std::transform(ucode.begin(),ucode.end(), ucode.begin(), ::toupper);
 	SecurityInfo info;
-	auto ret = ukey_db.GetBaseInfo(it->second, ucode, info);
-	if (ret)
+	if (market == "SZ" || market == "SH")
 	{
-		cerr << "Ukey GetBaseInfo failed market=" << market << ", code=" << ucode << endl;
-		return 0;
+		auto ret = ukey_db.GetBaseInfo(it->second, ucode, info);
+		if (ret)
+		{
+			auto ret = ukey_db.GetBaseInfo(it->second + 7, ucode, info);
+			if (ret)
+			{
+				return 0;
+			}
+		}
+	}
+	else
+	{
+		auto ret = ukey_db.GetBaseInfo(it->second, ucode, info);
+		if (ret)
+		{
+			return 0;
+		}
 	}
 	return info.ukey;
 }

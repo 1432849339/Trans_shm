@@ -51,7 +51,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
-    <RemoteRootDir>/home/sds/fqy</RemoteRootDir>
+    <RemoteRootDir>/home/ubuntu/actual_data</RemoteRootDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -65,11 +65,13 @@
     <TargetExt />
   </PropertyGroup>
   <ItemGroup>
+    <ClCompile Include="CreatePath.cpp" />
     <ClCompile Include="GetUkey.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Trans.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CreatePath.h" />
     <ClInclude Include="GetUkey.h" />
     <ClInclude Include="quote-1017-lxl.h" />
     <ClInclude Include="SDS20Struct-2017.h" />
@@ -79,8 +81,8 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Link>
-      <AdditionalLibraryDirectories>/home/sds/fqy/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LibraryDependencies>pthread;mysqlcppconn;ukey;shm</LibraryDependencies>
+      <AdditionalLibraryDirectories>/home/ubuntu/actual_data/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LibraryDependencies>pthread;mysqlcppconn;ukey;shm;mysqlclient</LibraryDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
