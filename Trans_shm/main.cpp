@@ -7,7 +7,7 @@
 
 using namespace std;
 
-const string base_path= "/home/ubuntu/actual_data/Request.csv/";
+const string base_path= "/mnt/data/fqy/Request/";
 bool   flag_next(true);
 
 map<int, string> MarketID{
@@ -246,7 +246,7 @@ void is_next_day()
 int thread_shm_to_local(string& date)
 {
 	flag_next = true;
-	string Path = "/home/ubuntu/actual_data/run_log/";
+	string Path = "/mnt/data/fqy/run_log/";
 	if (!CreatePath(Path))
 	{
 		cerr << "create Path error!" << endl;
@@ -310,7 +310,7 @@ int thread_shm_to_local(string& date)
 		this_thread::sleep_for(chrono::seconds(18));
 		string shm_name = "TRD" + date;
 		string file_name = Path + "Transaction";
-		shm2file<SDS20TRANSACTION, Transaction>(shm_name, file_name,date, TrdToTransaction,Trans2str);
+		shm2file<SDS20TRANSACTION, Transaction>(shm_name, file_name, date, TrdToTransaction, Trans2str);
 	};
 	m_threadgroup.push_back(std::make_shared<std::thread>(thread_trd));
 
@@ -319,6 +319,76 @@ int thread_shm_to_local(string& date)
 		if (it->joinable())
 		{
 			it->join();
+		}
+	}
+}
+
+bool delete_history(string& BasePath,string& date)
+{
+	DIR *dir = nullptr;
+	struct dirent *ptr = nullptr;
+	char		windCode[32]{ 0 };
+
+	if ((dir = opendir(BasePath.c_str())) == nullptr)
+	{
+		cerr << "BasePath is inexist" << endl;;
+		return false;
+	}
+	while ((ptr = readdir(dir)) != nullptr)
+	{
+		if (strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0)//隐藏文件
+		{
+			continue;
+		}
+		else if (ptr->d_type == 8)//普通文件
+		{
+			continue;
+		}
+		else if (ptr->d_type == 10)//链接
+		{
+			continue;
+		}
+		else if (ptr->d_type == 4)//目录
+		{
+			string Base;
+			Base = BasePath;
+			if (date == ptr->d_name && date.substr(0, 4) == Base.substr(Base.find_last_of('/')+1))
+			{//找到历史数据文件夹,删除
+				Base += "/";
+				Base += ptr->d_name;
+				if (rmdir(Base.c_str()) != 0)
+				{
+					cerr << "remove " << Base << " error!" << endl;
+					//return false;
+				}
+			}
+			else//没找到继续递归
+			{
+				Base += "/";
+				Base += ptr->d_name;
+				delete_history(Base, date);
+			}
+		}
+	}
+	closedir(dir);
+	return true;
+}
+
+bool remove_history(string& Path)
+{
+	if (access(Path.c_str(), F_OK) != 0)
+	{
+		return true;
+	}
+	else
+	{
+		if (rmdir(Path.c_str()) == 0)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
 		}
 	}
 }
