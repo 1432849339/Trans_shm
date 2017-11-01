@@ -228,6 +228,7 @@ int shm2file(string& shm_name,string& file_name,string& date,function<bool(OUTPU
 		}
 	}
 	flog.close();
+	shmClose(shm_name_c);
 	return 0;
 }
 
@@ -321,13 +322,13 @@ int thread_shm_to_local(string& date)
 			it->join();
 		}
 	}
+	return 0;
 }
 
 bool delete_history(string& BasePath,string& date)
 {
 	DIR *dir = nullptr;
 	struct dirent *ptr = nullptr;
-	char		windCode[32]{ 0 };
 
 	if ((dir = opendir(BasePath.c_str())) == nullptr)
 	{
