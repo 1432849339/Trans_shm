@@ -15,7 +15,7 @@ map<int, string> MarketID{
 	//{ MARKET_ALL, "ALL" },
 	{ MARKET_SZA, "SZA" },
 	{ MARKET_SHA, "SHA" },
-	{ MARKET_CFX, "CFX" },
+	{ MARKET_CFE, "CFE" },
 	{ MARKET_SHF, "SHF" },
 	{ MARKET_CZC, "CZC" },
 	{ MARKET_DCE, "DCE" },
