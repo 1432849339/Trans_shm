@@ -1,28 +1,87 @@
 #include "Trans.h"
 
 
+extern string date;
+bool   flag_next(true);
+DEFINE_int32(endHour, 18, "停止时间hour");
+DEFINE_int32(endMinu, 40, "停止时间minu");
+DEFINE_string(data_dir, "./data", "数据存放目录");
+DEFINE_string(LvtPrefix, "LVT", "LVT行情前缀");
+DEFINE_string(IdxPrefix, "IDX", "IDX行情前缀");
+DEFINE_string(SpiPrefix, "SPI", "SPI行情前缀");
+DEFINE_string(CfePrefix, "CFE", "CFE行情前缀");
+DEFINE_string(OrdPrefix, "ORD", "深圳逐笔委托");
+DEFINE_string(OrqPrefix, "ORQ", "委托队列");
+DEFINE_string(TrdPrefix, "TRD", "逐笔数据");
+
+//交易时间分段
+DEFINE_string(Ruler_SZ_SH, "[925-1130 1300-1505]", "SZ SH交易时间");
+DEFINE_string(Ruler_CF, "[915-1130 1300-1515]", "中国金融交易所,交易时间");
+DEFINE_string(Ruler_SHF, "[2100-2359 0-100 900-1130 1330-1505]", "上海期货交易所,交易时间");
+DEFINE_string(Ruler_DCE, "[2100-2330 900-1130 1330-1505]", "大连商品期货交易所");
+DEFINE_string(Ruler_CZC, "[2100-2330 900-1130 1330-1505]", "郑州期货交易所");
 
 
-int64_t GetMsTime(int64_t ymd, int64_t hmsu)
-{
-	struct tm timeinfo = { 0 };
-	time_t second;
-	int64_t  usecond;
-	timeinfo.tm_year = ymd / 10000 - 1900;
-	timeinfo.tm_mon = (ymd % 10000) / 100 - 1;
-	timeinfo.tm_mday = ymd % 100;
-	second = mktime(&timeinfo);
-	//80000000
-	int hou = hmsu / 10000000;
-	int min = (hmsu % 10000000) / 100000;
-	int sed = (hmsu % 100000) / 1000;
-	int used = hmsu % 1000;
+map<int, string> MarketID{
+	// 亚太地区
+	//{ MARKET_ALL, "ALL" },
+	{ MARKET_SZA, "SZA" },
+	{ MARKET_SHA, "SHA" },
+	{ MARKET_CFE, "CFE" },
+	{ MARKET_SHF, "SHF" },
+	{ MARKET_CZC, "CZC" },
+	{ MARKET_DCE, "DCE" },
+	{ MARKET_SGE, "SGE" },
+	{ MARKET_SZB, "SZB" },
+	{ MARKET_SHB, "SHB" },
+	{ MARKET_HK, "HK" },
+	{ MARKET_IBBM, "IBBM" },
+	{ MARKET_OTC, "OTC" },
+	{ MARKET_TAIFEX, "TAIFEX" },
+	{ MARKET_SGX, "SGX" },
+	{ MARKET_SICOM, "SICOM" },
+	{ MARKET_JPX, "JPX" },
+	{ MARKET_TOCOM, "TOCOM" },
+	{ MARKET_BMD, "BMD" },
+	{ MARKET_TFEX, "TFEX" },
+	{ MARKET_AFET, "AFET" },
+	{ MARKET_KRX, "KRX" },
 
-	usecond = second + hou * 3600 + min * 60 + sed;
-	usecond *= 1000000;
-	usecond += used * 1000;
-	return usecond;
-}
+
+	// 欧洲地区
+	{ MARKET_LME, "LME" },
+	{ MARKET_ICE, "ICE" },
+	{ MARKET_LIFFE, "LIFFE" },
+	//{ MARKET_XEurex, "XEurex" },
+
+	// 美洲地区
+	{ MARKET_CME, "CME" },
+	{ MARKET_CBOT, "CBOT" },
+	{ MARKET_NYBOT, "NYBOT" },
+	{ MARKET_NYMEX_COMEX, "NYMEX_COMEX" },
+	{ MARKET_ICE_CANOLA, "ICE_CANOLA" },
+	{ MARKET_eCBOT, "eCBOT" },
+	{ MARKET_CBOE, "CBOE" },
+
+	// 其他地区
+	{ MARKET_SFE, "SFE" },
+	{ MARKET_DME, "DME" },
+	{ MARKET_DGCX, "DGCX" },
+};
+
+map<int, string> VarID{
+	//{ VARIETY_ALL, "all" },
+	{ VARIETY_STOCK, "stock" },
+	{ VARIETY_BOND, "bond" },
+	{ VARIETY_FUND, "fund" },
+	{ VARIETY_SPOT, "spot" },
+	{ VARIETY_MONEY_MARKET, "money" },
+	{ VARIETY_INDEX, "index" },
+	{ VARIETY_FUTURE, "future" },
+	{ VARIETY_OPTION, "option" },
+	{ VARIETY_WARRANT, "warrant" },
+	{ VARIETY_STOCK_OPTION, "stcopt" },
+};
 
 time_t GetTr_time()
 {
@@ -30,23 +89,7 @@ time_t GetTr_time()
 	struct tm* pstm = nullptr;
 	tt = time(nullptr);
 	pstm = localtime(&tt);
-	if (pstm->tm_wday == 6)//星期6
-	{
-		tt += 2 * 24 * 60 * 60;
-	}
-	else if (pstm->tm_wday == 0)//星期天
-	{
-		tt += 1 * 24 * 60 * 60;
-	}
-	else if ((pstm->tm_wday == 5) &&
-		((pstm->tm_hour == SPLIT_HROUS && pstm->tm_min >= SPLIT_MINN) || (pstm->tm_hour > SPLIT_HROUS))
-		)
-	{
-		tt += 3 * 24 * 60 * 60;
-	}
-	else if ((pstm->tm_wday >= 1 && pstm->tm_wday <= 4) &&
-		((pstm->tm_hour == SPLIT_HROUS && pstm->tm_min >= SPLIT_MINN) || (pstm->tm_hour > SPLIT_HROUS))
-		)//星期1到星期4
+	if ((pstm->tm_hour == FLAGS_endHour && pstm->tm_min >= FLAGS_endMinu) || (pstm->tm_hour > FLAGS_endHour))
 	{
 		tt += 1 * 24 * 60 * 60;
 	}
@@ -73,23 +116,7 @@ int GetTrday()
 	struct tm*	pstm = nullptr;
 	tt = time(nullptr);
 	pstm = localtime(&tt);
-	if (pstm->tm_wday == 6)//星期6
-	{
-		tt += 2 * 24 * 60 * 60;
-	}
-	else if(pstm->tm_wday == 0)//星期天
-	{
-		tt += 1 * 24 * 60 * 60;
-	}
-	else if((pstm->tm_wday == 5) && 
-		  ((pstm->tm_hour == SPLIT_HROUS && pstm->tm_min >= SPLIT_MINN) || (pstm->tm_hour > SPLIT_HROUS))
-		)
-	{
-		tt += 3 * 24 * 60 * 60;
-	}
-	else if((pstm->tm_wday >= 1 && pstm->tm_wday <= 4) && 
-		((pstm->tm_hour == SPLIT_HROUS && pstm->tm_min >= SPLIT_MINN) || (pstm->tm_hour > SPLIT_HROUS))
-		)//星期1到星期4
+	if((pstm->tm_hour == FLAGS_endHour && pstm->tm_min >= FLAGS_endMinu) || (pstm->tm_hour > FLAGS_endHour))
 	{
 		tt += 1 * 24 * 60 * 60;
 	}
@@ -98,6 +125,18 @@ int GetTrday()
 	int mon = pstm->tm_mon + 1;
 	int day = pstm->tm_mday;
 	return year * 10000 + mon * 100 + day;
+}
+
+void is_next_day()
+{
+	using std::chrono::system_clock;
+	time_t tt = GetTr_time();
+	struct std::tm * ptm = std::localtime(&tt);
+	ptm->tm_hour = FLAGS_endHour;
+	ptm->tm_min = FLAGS_endMinu;
+	ptm->tm_sec = 0;
+	std::this_thread::sleep_until(system_clock::from_time_t(mktime(ptm)));
+	flag_next = false;
 }
 
 void Snapshot2str(Snapshot *ptr, string &str)
@@ -245,49 +284,46 @@ bool LvtToSnapshot(Snapshot& OutPut, SDS20LEVEL2& Input)
 	{
 		return false;
 	}
-	else
+	OutPut.ukey = ukey;
+	OutPut.trday = atoi(date.c_str());
+	OutPut.timeus = GetMsTime(Input.nActionDay, Input.nTime);
+	OutPut.recvus = (Input.nRecvTime < Input.nTime ? OutPut.timeus : GetMsTime(Input.nActionDay, Input.nRecvTime));
+	OutPut.status = 0;
+	OutPut.pre_close = Input.nPreClose;
+	OutPut.high = Input.nHigh;
+	OutPut.low = Input.nLow;
+	OutPut.open = Input.nOpen;
+	OutPut.last = Input.nMatch;
+	OutPut.match_num = Input.nNumTrades;
+	OutPut.volume = Input.iVolume;
+	OutPut.turnover = Input.iTurnover;
+	OutPut.info[0] = Input.nHighLimited;
+	OutPut.info[1] = Input.nLowLimited;
+	OutPut.info[2] = Input.nTotalBidVol;
+	OutPut.info[3] = Input.nTotalAskVol;
+	OutPut.info[4] = Input.nWeightedAvgBidPrice;
+	OutPut.info[5] = Input.nWeightedAvgAskPrice;
+	OutPut.info[6] = Input.nIOPV;
+	OutPut.info[7] = Input.nYieldToMaturity;
+	OutPut.info[8] = Input.nSyl1;
+	OutPut.info[9] = Input.nSyl2;
+	for (int i = 0; i < 10; ++i)
 	{
-		OutPut.ukey = ukey;
-		OutPut.trday = Input.nActionDay;
-		OutPut.timeus = GetMsTime(OutPut.trday, Input.nTime);
-		OutPut.recvus = (Input.nRecvTime < Input.nTime ? OutPut.timeus : GetMsTime(OutPut.trday, Input.nRecvTime));
-		OutPut.status = 0;
-		OutPut.pre_close = Input.nPreClose;
-		OutPut.high = Input.nHigh;
-		OutPut.low = Input.nLow;
-		OutPut.open = Input.nOpen;
-		OutPut.last = Input.nMatch;
-		OutPut.match_num = Input.nNumTrades;
-		OutPut.volume = Input.iVolume;
-		OutPut.turnover = Input.iTurnover;
-		OutPut.info[0] = Input.nHighLimited;
-		OutPut.info[1] = Input.nLowLimited;
-		OutPut.info[2] = Input.nTotalBidVol;
-		OutPut.info[3] = Input.nTotalAskVol;
-		OutPut.info[4] = Input.nWeightedAvgBidPrice;
-		OutPut.info[5] = Input.nWeightedAvgAskPrice;
-		OutPut.info[6] = Input.nIOPV;
-		OutPut.info[7] = Input.nYieldToMaturity;
-		OutPut.info[8] = Input.nSyl1;
-		OutPut.info[9] = Input.nSyl2;
-		for (int i = 0; i < 10; ++i)
-		{
-			OutPut.ask_price[i] = Input.nAskPrice[i];
-		}
-		for (int i = 0; i < 10; ++i)
-		{
-			OutPut.ask_volume[i] = Input.nAskVol[i];
-		}
-		for (int i = 0; i < 10; ++i)
-		{
-			OutPut.bid_price[i] = Input.nBidPrice[i];
-		}
-		for (int i = 0; i < 10; ++i)
-		{
-			OutPut.bid_volume[i] = Input.nBidVol[i];
-		}
-		return true;
+		OutPut.ask_price[i] = Input.nAskPrice[i];
 	}
+	for (int i = 0; i < 10; ++i)
+	{
+		OutPut.ask_volume[i] = Input.nAskVol[i];
+	}
+	for (int i = 0; i < 10; ++i)
+	{
+		OutPut.bid_price[i] = Input.nBidPrice[i];
+	}
+	for (int i = 0; i < 10; ++i)
+	{
+		OutPut.bid_volume[i] = Input.nBidVol[i];
+	}
+	return true;
 }
 
 bool IdxToSnapshot(Snapshot& OutPut, SDS20INDEX& InPut)
@@ -304,23 +340,20 @@ bool IdxToSnapshot(Snapshot& OutPut, SDS20INDEX& InPut)
 	{
 		return false;
 	}
-	else
-	{
-		OutPut.ukey = ukey;
-		OutPut.trday = InPut.nActionDay;
-		OutPut.timeus = GetMsTime(OutPut.trday, InPut.nTime);
-		OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(OutPut.trday, InPut.nRecvTime));
-		OutPut.status = 0;
-		OutPut.pre_close = InPut.nPreCloseIndex;
-		OutPut.high = InPut.nHighIndex;
-		OutPut.low = InPut.nLowIndex;
-		OutPut.open = InPut.nOpenIndex;
-		OutPut.last = InPut.nLastIndex;
-		OutPut.match_num = 0;
-		OutPut.volume = InPut.iTotalVolume;
-		OutPut.turnover = InPut.iTurnover;
-		return true;
-	}
+	OutPut.ukey = ukey;
+	OutPut.trday = atoi(date.c_str());
+	OutPut.timeus = GetMsTime(InPut.nActionDay, InPut.nTime);
+	OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(InPut.nActionDay, InPut.nRecvTime));
+	OutPut.status = 0;
+	OutPut.pre_close = InPut.nPreCloseIndex;
+	OutPut.high = InPut.nHighIndex;
+	OutPut.low = InPut.nLowIndex;
+	OutPut.open = InPut.nOpenIndex;
+	OutPut.last = InPut.nLastIndex;
+	OutPut.match_num = 0;
+	OutPut.volume = InPut.iTotalVolume;
+	OutPut.turnover = InPut.iTurnover;
+	return true;
 }
 
 bool Cfe_SpiToSnapshot(Snapshot& OutPut, SDS20FUTURE& InPut)
@@ -331,77 +364,74 @@ bool Cfe_SpiToSnapshot(Snapshot& OutPut, SDS20FUTURE& InPut)
 	{
 		return false;
 	}
-	else
+	OutPut.ukey = ukey;
+	OutPut.trday = atoi(date.c_str());
+	OutPut.timeus = GetMsTime(InPut.nActionDay, InPut.nTime);
+	OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(InPut.nActionDay, InPut.nRecvTime));
+	OutPut.status = 0;
+	OutPut.pre_close = InPut.nPreClose;
+	OutPut.high = InPut.nHigh;
+	OutPut.low = InPut.nLow;
+	OutPut.open = InPut.nOpen;
+	OutPut.last = InPut.nMatch;
+	OutPut.match_num = 0;
+	OutPut.volume = InPut.iVolume;
+	OutPut.turnover = InPut.iTurnover;
+	OutPut.info[0] = InPut.nHighLimited;
+	OutPut.info[1] = InPut.nLowLimited;
+	OutPut.info[2] = InPut.nSettlePrice;
+	OutPut.info[3] = InPut.nPreSettlePrice;
+	OutPut.info[4] = InPut.iOpenInterest;
+	OutPut.info[5] = InPut.iPreOpenInterest;
+	OutPut.info[6] = InPut.nCurrDelta;
+	OutPut.info[7] = InPut.nPreDelta;
+	OutPut.info[8] = 0;
+	OutPut.info[9] = 0;
+	for (int i = 0; i < 10; ++i)
 	{
-		OutPut.ukey = ukey;
-		OutPut.trday = InPut.nActionDay;
-		OutPut.timeus = GetMsTime(OutPut.trday, InPut.nTime);
-		OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(OutPut.trday, InPut.nRecvTime));
-		OutPut.status = 0;
-		OutPut.pre_close = InPut.nPreClose;
-		OutPut.high = InPut.nHigh;
-		OutPut.low = InPut.nLow;
-		OutPut.open = InPut.nOpen;
-		OutPut.last = InPut.nMatch;
-		OutPut.match_num = 0;
-		OutPut.volume = InPut.iVolume;
-		OutPut.turnover = InPut.iTurnover;
-		OutPut.info[0] = InPut.nHighLimited;
-		OutPut.info[1] = InPut.nLowLimited;
-		OutPut.info[2] = InPut.nSettlePrice;
-		OutPut.info[3] = InPut.nPreSettlePrice;
-		OutPut.info[4] = InPut.iOpenInterest;
-		OutPut.info[5] = InPut.iPreOpenInterest;
-		OutPut.info[6] = InPut.nCurrDelta;
-		OutPut.info[7] = InPut.nPreDelta;
-		OutPut.info[8] = 0;
-		OutPut.info[9] = 0;
-		for (int i = 0; i < 10; ++i)
+		if (i < 5)
 		{
-			if (i < 5)
-			{
-				OutPut.ask_price[i] = InPut.nAskPrice[i];
-			}
-			else
-			{
-				OutPut.ask_price[i] = 0;
-			}
+			OutPut.ask_price[i] = InPut.nAskPrice[i];
 		}
-		for (int i = 0; i < 10; ++i)
+		else
 		{
-			if (i < 5)
-			{
-				OutPut.ask_volume[i] = InPut.nAskVol[i];
-			}
-			else
-			{
-				OutPut.ask_volume[i] = 0;
-			}
+			OutPut.ask_price[i] = 0;
 		}
-		for (int i = 0; i < 10; ++i)
-		{
-			if (i < 5)
-			{
-				OutPut.bid_price[i] = InPut.nBidPrice[i];
-			}
-			else
-			{
-				OutPut.bid_price[i] = 0;
-			}
-		}
-		for (int i = 0; i < 10; ++i)
-		{
-			if (i < 5)
-			{
-				OutPut.bid_volume[i] = InPut.nBidVol[i];
-			}
-			else
-			{
-				OutPut.bid_volume[i] = 0;
-			}
-		}
-		return true;
 	}
+	for (int i = 0; i < 10; ++i)
+	{
+		if (i < 5)
+		{
+			OutPut.ask_volume[i] = InPut.nAskVol[i];
+		}
+		else
+		{
+			OutPut.ask_volume[i] = 0;
+		}
+	}
+	for (int i = 0; i < 10; ++i)
+	{
+		if (i < 5)
+		{
+			OutPut.bid_price[i] = InPut.nBidPrice[i];
+		}
+		else
+		{
+			OutPut.bid_price[i] = 0;
+		}
+	}
+	for (int i = 0; i < 10; ++i)
+	{
+		if (i < 5)
+		{
+			OutPut.bid_volume[i] = InPut.nBidVol[i];
+		}
+		else
+		{
+			OutPut.bid_volume[i] = 0;
+		}
+	}
+	return true;
 }
 
 bool TrdToTransaction(Transaction& OutPut, SDS20TRANSACTION& InPut)
@@ -412,20 +442,17 @@ bool TrdToTransaction(Transaction& OutPut, SDS20TRANSACTION& InPut)
 	{
 		return false;
 	}
-	else
-	{
-		OutPut.ukey = ukey;
-		OutPut.trday = InPut.nActionDay;
-		OutPut.timeus = GetMsTime(OutPut.trday, InPut.nTime);
-		OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(OutPut.trday, InPut.nRecvTime));
-		OutPut.index = InPut.nIndex;
-		OutPut.price = InPut.nPrice;
-		OutPut.volume = InPut.nVolume;
-		OutPut.ask_order = InPut.nAskOrder;
-		OutPut.bid_order = InPut.nBidOrder;
-		OutPut.trade_type = make_trade_type((char)InPut.nBSFlag, InPut.chOrderKind, InPut.chFunctionCode);
-		return true;
-	}
+	OutPut.ukey = ukey;
+	OutPut.trday = atoi(date.c_str());
+	OutPut.timeus = GetMsTime(InPut.nActionDay, InPut.nTime);
+	OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(InPut.nActionDay, InPut.nRecvTime));
+	OutPut.index = InPut.nIndex;
+	OutPut.price = InPut.nPrice;
+	OutPut.volume = InPut.nVolume;
+	OutPut.ask_order = InPut.nAskOrder;
+	OutPut.bid_order = InPut.nBidOrder;
+	OutPut.trade_type = make_trade_type((char)InPut.nBSFlag, InPut.chOrderKind, InPut.chFunctionCode);
+	return true;
 }
 
 bool OrdToOrder(Order& OutPut, SDS20ORDER& InPut)
@@ -436,18 +463,15 @@ bool OrdToOrder(Order& OutPut, SDS20ORDER& InPut)
 	{
 		return false;
 	}
-	else
-	{
-		OutPut.ukey = ukey;
-		OutPut.trday = InPut.nActionDay;
-		OutPut.timeus = GetMsTime(OutPut.trday, InPut.nTime);
-		OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(OutPut.trday, InPut.nRecvTime));
-		OutPut.index = InPut.nOrder;
-		OutPut.price = InPut.nPrice;
-		OutPut.volume = InPut.nVolume;
-		OutPut.order_type = make_order_type(InPut.chOrderKind, InPut.chFunctionCode);
-		return true;
-	}
+	OutPut.ukey = ukey;
+	OutPut.trday = atoi(date.c_str());
+	OutPut.timeus = GetMsTime(InPut.nActionDay, InPut.nTime);
+	OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(InPut.nActionDay, InPut.nRecvTime));
+	OutPut.index = InPut.nOrder;
+	OutPut.price = InPut.nPrice;
+	OutPut.volume = InPut.nVolume;
+	OutPut.order_type = make_order_type(InPut.chOrderKind, InPut.chFunctionCode);
+	return true;
 }
 
 bool OrqToOrderqueue(OrderQueue& OutPut, SDS20ORDERQUEUE& InPut)
@@ -458,26 +482,110 @@ bool OrqToOrderqueue(OrderQueue& OutPut, SDS20ORDERQUEUE& InPut)
 	{
 		return false;
 	}
-	else
+	OutPut.ukey = ukey;
+	OutPut.trday = atoi(date.c_str());
+	OutPut.timeus = GetMsTime(InPut.nActionDay, InPut.nTime);
+	OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(InPut.nActionDay, InPut.nRecvTime));
+	OutPut.side = InPut.nSide;
+	OutPut.price = InPut.nPrice;
+	OutPut.orders_num = InPut.nOrders;
+	for (int i = 0; i < 50; ++i)
 	{
-		OutPut.ukey = ukey;
-		OutPut.trday = InPut.nActionDay;
-		OutPut.timeus = GetMsTime(OutPut.trday, InPut.nTime);
-		OutPut.recvus = (InPut.nRecvTime < InPut.nTime ? OutPut.timeus : GetMsTime(OutPut.trday, InPut.nRecvTime));
-		OutPut.side = InPut.nSide;
-		OutPut.price = InPut.nPrice;
-		OutPut.orders_num = InPut.nOrders;
-		for (int i = 0; i < 50; ++i)
+		if (i < InPut.nABItems)
 		{
-			if (i < InPut.nABItems)
-			{
-				OutPut.queue[i] = InPut.nABVolume[i];
-			}
-			else
-			{
-				OutPut.queue[i] = 0;
-			}
+			OutPut.queue[i] = InPut.nABVolume[i];
 		}
-		return true;
+		else
+		{
+			OutPut.queue[i] = 0;
+		}
 	}
+	return true;
+}
+
+bool InitAndOpenToRead(char* shm_name, int& handle)
+{
+	int retcode = 0;
+	char appname[] = "";
+	retcode = shmInit(9901, appname);
+	if (retcode != 0)
+	{
+		LOG(ERROR) << "shmInit error=" << retcode;
+		return false;
+	}
+	retcode = shmOpenForRead(shm_name);
+	if (retcode != 0)
+	{
+		LOG(ERROR) << "shmOpen error=" << retcode << " shm_name : %s" << shm_name;
+		return false;
+	}
+	handle = shmHandle(shm_name);
+	int recnum = shmRecnum(handle);
+	LOG(INFO) << "recnum=" << recnum << "\t" << shm_name;
+	return true;
+}
+
+int thread_shm_to_local()
+{
+	flag_next = true;
+	list<std::shared_ptr<std::thread>> m_threadgroup;
+	stringstream ss;
+	ss << GetTrday();
+	date = ss.str();
+	auto thread_cfe = [&]() {
+		string shm_name = FLAGS_CfePrefix + date;
+		shm2file<SDS20FUTURE, Snapshot>(shm_name, date, Cfe_SpiToSnapshot, Snapshot2str);
+	};
+	m_threadgroup.push_back(std::make_shared<std::thread>(thread_cfe));
+
+	auto thread_spi = [&]() {
+		this_thread::sleep_for(chrono::seconds(3));
+		string shm_name = FLAGS_SpiPrefix + date;
+		shm2file<SDS20FUTURE, Snapshot>(shm_name, date, Cfe_SpiToSnapshot, Snapshot2str);
+	};
+	m_threadgroup.push_back(std::make_shared<std::thread>(thread_spi));
+
+	auto thread_lvt = [&]() {
+		this_thread::sleep_for(chrono::seconds(6));
+		string shm_name = FLAGS_LvtPrefix + date;
+		shm2file<SDS20LEVEL2, Snapshot>(shm_name, date, LvtToSnapshot, Snapshot2str);
+	};
+	m_threadgroup.push_back(std::make_shared<std::thread>(thread_lvt));
+
+	auto thread_idx = [&]() {
+		this_thread::sleep_for(chrono::seconds(9));
+		string shm_name = FLAGS_IdxPrefix + date;
+		shm2file<SDS20INDEX, Snapshot>(shm_name, date, IdxToSnapshot, Snapshot2str);
+	};
+	m_threadgroup.push_back(std::make_shared<std::thread>(thread_idx));
+
+	auto thread_orq = [&]() {
+		this_thread::sleep_for(chrono::seconds(12));
+		string shm_name = FLAGS_OrqPrefix + date;
+		shm2file<SDS20ORDERQUEUE, OrderQueue>(shm_name, date, OrqToOrderqueue, Orderque2str);
+	};
+	m_threadgroup.push_back(std::make_shared<std::thread>(thread_orq));
+
+	auto thread_ord = [&]() {
+		this_thread::sleep_for(chrono::seconds(15));
+		string shm_name = FLAGS_OrdPrefix + date;
+		shm2file<SDS20ORDER, Order>(shm_name, date, OrdToOrder, Order2str);
+	};
+	m_threadgroup.push_back(std::make_shared<std::thread>(thread_ord));
+
+	auto thread_trd = [&]() {
+		this_thread::sleep_for(chrono::seconds(18));
+		string shm_name = FLAGS_TrdPrefix + date;
+		shm2file<SDS20TRANSACTION, Transaction>(shm_name, date, TrdToTransaction, Trans2str);
+	};
+	m_threadgroup.push_back(std::make_shared<std::thread>(thread_trd));
+
+	for (auto &it : m_threadgroup)
+	{
+		if (it->joinable())
+		{
+			it->join();
+		}
+	}
+	return 0;
 }

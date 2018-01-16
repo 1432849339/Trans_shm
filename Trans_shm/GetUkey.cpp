@@ -1,4 +1,12 @@
+#include "gflags/gflags.h"
 #include "GetUkey.h"
+
+
+DEFINE_string(csvFilePath, "/home/sds/fqy/local_file", "文件登陆时,文件的目录位置");
+DEFINE_string(mysql_url, "172.24.54.1", "数据库ip");
+DEFINE_string(mysql_name, "ukdbr", "数据库账户名");
+DEFINE_string(mysql_password, "ukdbr", "数据库密码");
+DEFINE_string(mysql_database, "ukdb09", "数据库名");
 
 chronos::SecurityMaster ukey_db;
 map<std::string, int> g_market_ids =
@@ -7,20 +15,20 @@ map<std::string, int> g_market_ids =
 	{ "SH",  MARKET_SHA },
 	{ "SZB", MARKET_SZB },
 	{ "SHB", MARKET_SHB },
-	{ "CF",  MARKET_CFX },
+	{ "CF",  MARKET_CFE },
 	{ "SHF", MARKET_SHF },
 	{ "CZC", MARKET_CZC },
 	{ "DCE", MARKET_DCE },
+	{ "SGE", MARKET_SGE },
 };
 
 bool Init_ukdb09(const std::set<std::string>& market_set, bool use_file)
 {
 	std::cout << "InitUkeyDB start use_file=" << use_file << endl;
 	int count = 0;
-	string dir_ = "/home/ubuntu/actual_data/local_file";
 	if (use_file)
 	{
-		count = ukey_db.UKOpen(dir_);
+		count = ukey_db.UKOpen(FLAGS_csvFilePath);
 	}
 	else
 	{
@@ -58,7 +66,7 @@ bool Init_ukdb09(const std::set<std::string>& market_set, bool use_file)
 		{
 			cout << "ukey_db market_id=" << mk << endl;
 		}
-		count = ukey_db.UKOpen(market_ids, "172.24.54.1", "ukdb", "ukdb", "ukdb09", 0);
+		count = ukey_db.UKOpen(market_ids, FLAGS_mysql_url, FLAGS_mysql_name, FLAGS_mysql_password, FLAGS_mysql_database, 0);
 	}
 	cout << "InitUkeyDB done use_file=" << use_file << ", count=" << count << endl;
 	return true;
